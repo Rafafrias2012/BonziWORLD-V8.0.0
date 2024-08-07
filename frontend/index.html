@@ -3,11 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Windows 98 Chat</title>
+    <title>Windows 98 Bonzi Chat</title>
     <link rel="stylesheet" href="https://unpkg.com/98.css">
     <link rel="stylesheet" href="style.css">
+    <script src="https://code.createjs.com/1.0.0/createjs.min.js"></script>
 </head>
 <body>
+    <div id="login-window" class="window">
+        <div class="title-bar">
+            <div class="title-bar-text">Login</div>
+        </div>
+        <div class="window-body">
+            <div class="field-row">
+                <label for="nickname">Nickname:</label>
+                <input id="nickname" type="text">
+            </div>
+            <div class="field-row">
+                <label for="room-id">Room ID:</label>
+                <input id="room-id" type="text">
+            </div>
+            <div class="field-row">
+                <button id="login-button">Login</button>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="bonziCanvas"></canvas>
+    
+    <div id="nametag" class="window">
+        <div class="title-bar">
+            <div class="title-bar-text">Bonzi</div>
+        </div>
+    </div>
+
+    <div id="speech-bubble" class="window">
+        <div class="title-bar">
+            <div class="title-bar-text">Speech</div>
+        </div>
+        <div class="window-body">
+            <p id="speech-text"></p>
+        </div>
+    </div>
+
     <div class="taskbar">
         <div class="start-button">
             <img src="https://win98icons.alexmeub.com/icons/png/windows-0.png" alt="Start">
