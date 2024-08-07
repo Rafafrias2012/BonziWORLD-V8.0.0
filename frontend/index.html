@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Windows 98 Chat</title>
+    <link rel="stylesheet" href="https://unpkg.com/98.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="taskbar">
+        <div class="start-button">
+            <img src="https://win98icons.alexmeub.com/icons/png/windows-0.png" alt="Start">
+            Start
+        </div>
+        <div class="taskbar-right">
+            <div class="time" id="current-time"></div>
+        </div>
+    </div>
+    <div class="chat-bar">
+        <input id="message-input" type="text" placeholder="Type your message...">
+        <button id="send-button">Send</button>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
