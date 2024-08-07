@@ -11,6 +11,7 @@ const roomIdInput = document.getElementById('room-id');
 let stage, bonzi, speechBubble, nametag;
 let nickname = '';
 let roomId = '';
+let bonzis = {};
 
 loginButton.addEventListener('click', login);
 sendButton.addEventListener('click', sendMessage);
@@ -114,6 +115,51 @@ function speak(text) {
 socket.on('chat message', (data) => {
     console.log(`${data.nickname}: ${data.message}`);
 });
+
+socket.on('user joined', (data) => {
+    console.log(`${data.nickname} joined the room`);
+    if (data.nickname !== nickname) {
+        const newBonzi = createBonzi(data.nickname);
+        bonzis[data.nickname] = newBonzi;
+        newBonzi.gotoAndPlay('enter');
+    }
+});
+
+socket.on('user left', (data) => {
+    console.log(`${data.nickname} left the room`);
+    if (bonzis[data.nickname]) {
+        bonzis[data.nickname].gotoAndPlay('leave');
+        setTimeout(() => {
+            stage.removeChild(bonzis[data.nickname]);
+            delete bonzis[data.nickname];
+        }, 1000);
+    }
+});
+
+function createBonzi(nickname) {
+    const spriteSheet = new createjs.SpriteSheet({
+        images: ['https://bonziworld.org/img/agents/purple.png'],
+        frames: { width: 200, height: 160 },
+        animations: {
+            idle: 0,
+            enter: [277, 302, 'idle', 0.25],
+            leave: [16, 39, 40, 0.25]
+        }
+    });
+
+    const newBonzi = new createjs.Sprite(spriteSheet, 'idle');
+    newBonzi.x = Math.random() * (stage.canvas.width - 200);
+    newBonzi.y = Math.random() * (stage.canvas.height - 160);
+
+    const newNametag = new createjs.Text(nickname, '12px Arial', '#000000');
+    newNametag.x = newBonzi.x + 100 - newNametag.getMeasuredWidth() / 2;
+    newNametag.y = newBonzi.y + 160;
+
+    stage.addChild(newBonzi);
+    stage.addChild(newNametag);
+
+    return newBonzi;
+}
 
 function updateTime() {
     const now = new Date();
