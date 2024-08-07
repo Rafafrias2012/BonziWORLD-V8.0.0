@@ -15,6 +15,7 @@ io.on('connection', (socket) => {
         socket.nickname = data.nickname;
         socket.roomId = data.roomId;
         console.log(`${socket.nickname} joined room ${socket.roomId}`);
+        io.to(socket.roomId).emit('user joined', { nickname: socket.nickname });
     });
 
     socket.on('chat message', (data) => {
@@ -22,7 +23,8 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
-        console.log('User disconnected');
+        console.log(`${socket.nickname} disconnected`);
+        io.to(socket.roomId).emit('user left', { nickname: socket.nickname });
     });
 });
 
