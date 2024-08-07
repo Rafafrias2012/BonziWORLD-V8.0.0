@@ -9,9 +9,12 @@ const nicknameInput = document.getElementById('nickname');
 const roomIdInput = document.getElementById('room-id');
 
 let stage, bonzi, speechBubble, nametag;
-let nickname = '';
+let nickname = localStorage.getItem('nickname') || '';
 let roomId = '';
 let bonzis = {};
+let nametags = {};
+
+nicknameInput.value = nickname;
 
 loginButton.addEventListener('click', login);
 sendButton.addEventListener('click', sendMessage);
@@ -23,6 +26,7 @@ messageInput.addEventListener('keypress', (e) => {
 
 function login() {
     nickname = nicknameInput.value.trim() || 'Default';
+    localStorage.setItem('nickname', nickname);
     roomId = roomIdInput.value.trim() || 'Default';
     loginWindow.style.display = 'none';
     socket.emit('join', { nickname, roomId });
@@ -32,6 +36,9 @@ function login() {
 function initBonzi() {
     const canvas = document.getElementById('bonziCanvas');
     stage = new createjs.Stage(canvas);
+    stage.enableMouseOver();
+
+    createjs.Touch.enable(stage);
 
     const spriteSheet = new createjs.SpriteSheet({
         images: ['https://bonziworld.org/img/agents/purple.png'],
@@ -39,13 +46,13 @@ function initBonzi() {
         animations: {
             idle: 0,
             enter: [277, 302, 'idle', 0.25],
-            leave: [16, 39, 40, 0.25]
+            leave: [16, 39, 'gone', 0.25],
+            gone: 40
         }
     });
 
-    bonzi = new createjs.Sprite(spriteSheet, 'idle');
-    bonzi.x = Math.random() * (canvas.width - 200);
-    bonzi.y = Math.random() * (canvas.height - 160);
+    bonzi = createBonzi(nickname, spriteSheet);
+    bonzis[nickname] = bonzi;
 
     stage.addChild(bonzi);
 
@@ -53,16 +60,28 @@ function initBonzi() {
     speechBubble.visible = false;
     stage.addChild(speechBubble);
 
-    nametag = new createjs.Text(nickname, '12px Arial', '#000000');
-    nametag.visible = true;
-    stage.addChild(nametag);
-
-    makeDraggable(bonzi);
-
     createjs.Ticker.framerate = 30;
     createjs.Ticker.addEventListener('tick', tick);
 
     bonzi.gotoAndPlay('enter');
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+}
+
+function createBonzi(nickName, spriteSheet) {
+    const newBonzi = new createjs.Sprite(spriteSheet, 'idle');
+    newBonzi.x = Math.random() * (stage.canvas.width - 200);
+    newBonzi.y = Math.random() * (stage.canvas.height - 160);
+
+    const newNametag = new createjs.Text(nickName, '12px Arial', '#000000');
+    newNametag.textAlign = 'center';
+    stage.addChild(newNametag);
+    nametags[nickName] = newNametag;
+
+    makeDraggable(newBonzi);
+
+    return newBonzi;
 }
 
 function makeDraggable(obj) {
@@ -78,7 +97,7 @@ function makeDraggable(obj) {
 
 function tick(event) {
     updateSpeechBubble();
-    updateNametag();
+    updateNametags();
     stage.update(event);
 }
 
@@ -89,9 +108,13 @@ function updateSpeechBubble() {
     }
 }
 
-function updateNametag() {
-    nametag.x = bonzi.x + 100 - nametag.getMeasuredWidth() / 2;
-    nametag.y = bonzi.y + 160;
+function updateNametags() {
+    for (let nick in nametags) {
+        if (bonzis[nick]) {
+            nametags[nick].x = bonzis[nick].x + 100;
+            nametags[nick].y = bonzis[nick].y + 165;
+        }
+    }
 }
 
 function sendMessage() {
@@ -118,8 +141,8 @@ socket.on('chat message', (data) => {
 
 socket.on('user joined', (data) => {
     console.log(`${data.nickname} joined the room`);
-    if (data.nickname !== nickname) {
-        const newBonzi = createBonzi(data.nickname);
+    if (data.nickname !== nickname && !bonzis[data.nickname]) {
+        const newBonzi = createBonzi(data.nickname, bonzi.spriteSheet);
         bonzis[data.nickname] = newBonzi;
         newBonzi.gotoAndPlay('enter');
     }
@@ -129,37 +152,16 @@ socket.on('user left', (data) => {
     console.log(`${data.nickname} left the room`);
     if (bonzis[data.nickname]) {
         bonzis[data.nickname].gotoAndPlay('leave');
-        setTimeout(() => {
-            stage.removeChild(bonzis[data.nickname]);
-            delete bonzis[data.nickname];
-        }, 1000);
+        bonzis[data.nickname].on('animationend', function() {
+            if (this.currentAnimation === 'gone') {
+                stage.removeChild(bonzis[data.nickname]);
+                stage.removeChild(nametags[data.nickname]);
+                delete bonzis[data.nickname];
+                delete nametags[data.nickname];
+            }
+        });
     }
 });
-
-function createBonzi(nickname) {
-    const spriteSheet = new createjs.SpriteSheet({
-        images: ['https://bonziworld.org/img/agents/purple.png'],
-        frames: { width: 200, height: 160 },
-        animations: {
-            idle: 0,
-            enter: [277, 302, 'idle', 0.25],
-            leave: [16, 39, 40, 0.25]
-        }
-    });
-
-    const newBonzi = new createjs.Sprite(spriteSheet, 'idle');
-    newBonzi.x = Math.random() * (stage.canvas.width - 200);
-    newBonzi.y = Math.random() * (stage.canvas.height - 160);
-
-    const newNametag = new createjs.Text(nickname, '12px Arial', '#000000');
-    newNametag.x = newBonzi.x + 100 - newNametag.getMeasuredWidth() / 2;
-    newNametag.y = newBonzi.y + 160;
-
-    stage.addChild(newBonzi);
-    stage.addChild(newNametag);
-
-    return newBonzi;
-}
 
 function updateTime() {
     const now = new Date();
@@ -168,12 +170,12 @@ function updateTime() {
     currentTime.textContent = `${hours}:${minutes}`;
 }
 
-updateTime();
-setInterval(updateTime, 60000);
-
-window.addEventListener('resize', () => {
+function resizeCanvas() {
     const canvas = document.getElementById('bonziCanvas');
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight - 30;
     stage.updateViewport(canvas.width, canvas.height);
-});
+}
+
+updateTime();
+setInterval(updateTime, 60000);
